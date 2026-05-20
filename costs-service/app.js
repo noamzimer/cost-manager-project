@@ -83,9 +83,13 @@ function isPastMonth(year, month) {
 
 async function checkUserExists(userid) {
     const usersServiceUrl = process.env.USERS_SERVICE_URL;
-    const response = await axios.get(`${usersServiceUrl}/api/users/${userid}`);
 
-    return response.status === 200;
+    try {
+        const response = await axios.get(`${usersServiceUrl}/api/users/${userid}`);
+        return response.status === 200;
+    } catch (error) {
+        return false;
+    }
 }
 
 /*
@@ -167,7 +171,14 @@ app.post('/api/add', async (request, response) => {
             });
         }
 
-        await checkUserExists(userid);
+        const userExists = await checkUserExists(userid);
+
+        if (!userExists) {
+            return response.status(404).json({
+                id: 404,
+                message: 'User does not exist'
+            });
+        }
 
         const costDate = created_at ? new Date(created_at) : new Date();
 
@@ -197,11 +208,11 @@ app.post('/api/add', async (request, response) => {
 
         const savedCost = await cost.save();
 
-        response.status(201).json(savedCost);
+        return response.status(201).json(savedCost);
     } catch (error) {
         logger.error(error, 'Error adding cost');
 
-        response.status(500).json({
+        return response.status(500).json({
             id: 500,
             message: error.message
         });
@@ -228,7 +239,14 @@ app.get('/api/report', async (request, response) => {
             });
         }
 
-        await checkUserExists(userid);
+        const userExists = await checkUserExists(userid);
+
+        if (!userExists) {
+            return response.status(404).json({
+                id: 404,
+                message: 'User does not exist'
+            });
+        }
 
         if (isPastMonth(year, month)) {
             const savedReport = await Report.findOne({
@@ -256,11 +274,11 @@ app.get('/api/report', async (request, response) => {
 
         const report = await buildMonthlyReport(userid, year, month);
 
-        response.json(report);
+        return response.json(report);
     } catch (error) {
         logger.error(error, 'Error getting report');
 
-        response.status(500).json({
+        return response.status(500).json({
             id: 500,
             message: error.message
         });
@@ -294,14 +312,14 @@ app.get('/api/total', async (request, response) => {
             }
         ]);
 
-        response.json({
+        return response.json({
             userid,
             total: result.length > 0 ? result[0].total : 0
         });
     } catch (error) {
         logger.error(error, 'Error getting total costs');
 
-        response.status(500).json({
+        return response.status(500).json({
             id: 500,
             message: error.message
         });
