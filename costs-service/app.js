@@ -84,12 +84,23 @@ function isPastMonth(year, month) {
 async function checkUserExists(userid) {
     const usersServiceUrl = process.env.USERS_SERVICE_URL;
 
-    try {
-        const response = await axios.get(`${usersServiceUrl}/api/users/${userid}`);
-        return response.status === 200;
-    } catch (error) {
-        return false;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+        try {
+            const response = await axios.get(`${usersServiceUrl}/api/users/${userid}`, {
+                timeout: 10000
+            });
+
+            return response.status === 200;
+        } catch (error) {
+            if (attempt === 3) {
+                return false;
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
     }
+
+    return false;
 }
 
 /*
